@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: notification-service
+  main:
+    web-application-type: none
+  data:
+    mongodb:
+      uri: ${MONGO_URI:mongodb://localhost:57017/notification_db}
+      auto-index-creation: true
+  kafka:
+    bootstrap-servers: ${KAFKA_SERVERS:localhost:59092}
+    consumer:
+      group-id: notification-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        max.block.ms: 3000
+
+grpc:
+  server:
+    port: 9106

@@ -1,0 +1,45 @@
+spring:
+  application:
+    name: scoring-service
+  main:
+    web-application-type: none
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:55432}/scoring_db
+    username: ${POSTGRES_USER:credit}
+    password: ${POSTGRES_PASSWORD:credit}
+    hikari:
+      maximum-pool-size: 5
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+    properties:
+      hibernate.default_batch_fetch_size: 50
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:56379}
+      timeout: 500ms
+  kafka:
+    bootstrap-servers: ${KAFKA_SERVERS:localhost:59092}
+    consumer:
+      group-id: scoring-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+      properties:
+        max.block.ms: 3000
+        delivery.timeout.ms: 10000
+        request.timeout.ms: 5000
+
+grpc:
+  server:
+    port: 9105
+  client:
+    timeout-ms: 3000
+    max-attempts: 3
+    backoff-ms: 150

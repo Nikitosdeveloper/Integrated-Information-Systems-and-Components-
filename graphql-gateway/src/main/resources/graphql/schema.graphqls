@@ -1,0 +1,201 @@
+# GraphQL API кредитного скоринга. Схема описывает бизнес-операции и данные так, как они нужны клиенту,
+# а не структуру таблиц: например, заявка объединяет данные нескольких сервисов.
+
+enum ApplicationStatus { DRAFT REVIEW WAITING_DOCS COMMITTEE APPROVED REJECTED CANCELLED }
+enum ListScope { MY ANALYST_QUEUE COMMITTEE_QUEUE ALL }
+enum ApplicationSortField { CREATED_AT SUBMITTED_AT AMOUNT STATUS SCORE }
+enum SortDirection { ASC DESC }
+enum Recommendation { APPROVE REJECT }
+enum DecisionType { APPROVED REJECTED }
+enum StatementFormType { BALANCE PROFIT_LOSS }
+
+type Query {
+    "Профиль текущего пользователя"
+    me: User!
+    "Справочник отраслей (без аутентификации)"
+    industries: [Industry!]!
+    creditProducts(includeArchived: Boolean = false): [CreditProduct!]!
+
+    myCompany: Company
+    company(id: ID!): Company
+
+    "Заявки компании заёмщика"
+    myApplications(filter: ApplicationFilter, sort: ApplicationSort, page: Int = 1, pageSize: Int = 20): ApplicationPage!
+    "Очередь аналитика: неназначенные заявки на рассмотрении и заявки, закреплённые за ним"
+    analystQueue(filter: ApplicationFilter, sort: ApplicationSort, page: Int = 1, pageSize: Int = 20): ApplicationPage!
+    "Очередь кредитного комитета"
+    committeeQueue(filter: ApplicationFilter, sort: ApplicationSort, page: Int = 1, pageSize: Int = 20): ApplicationPage!
+    "Все заявки (аналитик, комитет, администратор)"
+    applications(filter: ApplicationFilter, sort: ApplicationSort, page: Int = 1, pageSize: Int = 20): ApplicationPage!
+    application(id: ID!): CreditApplication!
+    "Сводная статистика по заявкам: количество и суммы по статусам, средние значения"
+    applicationStats(scope: ListScope, filter: ApplicationFilter): ApplicationStats!
+
+    myStatements: [FinancialStatement!]!
+    statement(id: ID!): FinancialStatement!
+
+    notifications(unreadOnly: Boolean = false, limit: Int = 20): [Notification!]!
+
+    users(search: String, role: String, status: String, page: Int = 1, pageSize: Int = 20): UserPage!
+    roles: [RoleInfo!]!
+    scoringModels: [ScoringModel!]!
+    scoringModel(id: ID!): ScoringModel!
+    ratioDefinitions: [RatioDefinition!]!
+    benchmarkSets: [BenchmarkSet!]!
+    benchmarkSet(id: ID!): BenchmarkSet!
+}
+
+type Mutation {
+    # --- аутентификация (Auth Service) ---
+    login(email: String!, password: String!): AuthPayload!
+    "Регистрация заёмщика; компанию к учётной записи привязывает администратор"
+    register(input: RegisterInput!): User!
+    logout: Boolean!
+
+    # --- заёмщик ---
+    updateCompanyProfile(input: UpdateCompanyInput!): Company!
+    uploadStatement(input: UploadStatementInput!): FinancialStatement!
+    createApplication(input: CreateApplicationInput!): CreditApplication!
+    submitApplication(id: ID!): CreditApplication!
+    cancelApplication(id: ID!, reason: String): CreditApplication!
+    provideDocument(itemId: ID!, fileName: String!): DocumentRequest!
+
+    # --- аналитик ---
+    assignApplicationToMe(id: ID!): CreditApplication!
+    requestDocuments(input: RequestDocumentsInput!): DocumentRequest!
+    saveConclusion(input: ConclusionInput!): AnalystConclusion!
+    sendToCommittee(id: ID!): CreditApplication!
+    recalculateScoring(applicationId: ID!): Boolean!
+
+    # --- кредитный комитет ---
+    makeDecision(input: DecisionInput!): CreditDecision!
+
+    # --- уведомления ---
+    markNotificationRead(id: ID!): Notification!
+
+    # --- администратор ---
+    blockUser(id: ID!): User!
+    unblockUser(id: ID!): User!
+    changeUserRole(id: ID!, role: String!): User!
+    assignUserCompany(userId: ID!, companyId: ID!): User!
+    activateScoringModel(id: ID!): ScoringModel!
+    activateBenchmarkSet(id: ID!): BenchmarkSet!
+}
+
+# ---------- входные типы ----------
+input RegisterInput { email: String! password: String! fullName: String! }
+input UpdateCompanyInput { address: String phone: String }
+input StatementLineInput { code: String! name: String value: Float! }
+input UploadStatementInput { formType: StatementFormType! periodYear: Int! lines: [StatementLineInput!]! }
+input CreateApplicationInput { productId: ID! amount: Float! termMonths: Int! purpose: String! collateral: String }
+input RequestedDocumentInput { title: String! isRequired: Boolean = true }
+input RequestDocumentsInput { applicationId: ID! dueDate: String! items: [RequestedDocumentInput!]! }
+input ConclusionInput { applicationId: ID! text: String! recommendation: Recommendation! }
+input DecisionInput { applicationId: ID! decision: DecisionType! approvedAmount: Float comment: String }
+input ApplicationFilter {
+    statuses: [ApplicationStatus!]
+    amountFrom: Float
+    amountTo: Float
+    companyNameContains: String
+    rating: String
+    "Дата в формате ГГГГ-ММ-ДД"
+    createdFrom: String
+    createdTo: String
+    assignedToMe: Boolean
+}
+input ApplicationSort { field: ApplicationSortField = CREATED_AT direction: SortDirection = DESC }
+
+# ---------- аутентификация и пользователи ----------
+type AuthPayload { token: String! expiresInSeconds: Int! user: User! }
+type User {
+    id: ID!
+    email: String!
+    fullName: String!
+    role: String!
+    companyId: ID
+    status: String!
+    permissions: [String!]
+    company: Company
+}
+type UserPage { items: [User!]! total: Int! page: Int! pageSize: Int! }
+type RoleInfo { code: String! name: String! permissions: [String!]! }
+
+# ---------- заёмщик ----------
+type Industry { code: String! name: String! }
+type Company { id: ID! name: String! unp: String! industry: Industry address: String phone: String }
+
+# ---------- заявки ----------
+type CreditProduct { id: ID! name: String! minAmount: Float! maxAmount: Float! maxTermMonths: Int! interestRate: Float! status: String! }
+type CreditApplication {
+    id: ID!
+    status: ApplicationStatus!
+    amount: Float!
+    termMonths: Int!
+    purpose: String
+    collateral: String
+    createdAt: String!
+    submittedAt: String
+    latestRating: String
+    latestScore: Float
+    recommendedLimit: Float
+    product: CreditProduct!
+    "Данные компании (Borrower Service)"
+    company: Company
+    "Аналитик, назначенный на заявку (Auth Service)"
+    assignedAnalyst: User
+    history: [StatusHistoryItem!]!
+    documentRequests: [DocumentRequest!]!
+    conclusion: AnalystConclusion
+    decision: CreditDecision
+    "Отчётность компании (Statement Service)"
+    statements: [FinancialStatement!]
+    "Финансовый анализ (Analysis Service); недоступен заёмщику"
+    analysis: FinancialAnalysis
+    "Результат скоринга (Scoring Service); недоступен заёмщику"
+    scoring: ScoringResult
+}
+type ApplicationPage { items: [CreditApplication!]! total: Int! page: Int! pageSize: Int! }
+type StatusStat { status: ApplicationStatus! count: Int! totalAmount: Float! }
+type ApplicationStats { totalCount: Int! totalAmount: Float! averageAmount: Float! averageScore: Float byStatus: [StatusStat!]! }
+type StatusHistoryItem { fromStatus: String toStatus: String! changedBy: User comment: String changedAt: String! }
+type DocumentRequest { id: ID! applicationId: ID! requestedBy: User dueDate: String! status: String! items: [RequestedDocument!]! }
+type RequestedDocument { id: ID! title: String! isRequired: Boolean! status: String! fileName: String }
+type AnalystConclusion { id: ID! analyst: User text: String! recommendation: Recommendation! createdAt: String! }
+type CreditDecision { id: ID! decidedBy: User decision: DecisionType! approvedAmount: Float comment: String decidedAt: String! }
+
+# ---------- отчётность ----------
+type FinancialStatement {
+    id: ID!
+    formType: StatementFormType!
+    periodYear: Int!
+    status: String!
+    createdAt: String!
+    lines: [StatementLine!]!
+    issues: [ValidationIssue!]!
+}
+type StatementLine { code: String! name: String! value: Float! }
+type ValidationIssue { severity: String! message: String! }
+
+# ---------- анализ и скоринг ----------
+type RatioDefinition { code: String! name: String! formula: String! higherIsBetter: Boolean! }
+type RatioValue { ratioCode: String! definition: RatioDefinition! periodYear: Int! value: Float! assessment: String }
+type FinancialAnalysis { id: ID! benchmarkSetName: String calculatedAt: String! ratios: [RatioValue!]! }
+type BenchmarkItem { industryCode: String! industryName: String! ratioCode: String! ratioName: String! goodThreshold: Float! okThreshold: Float! }
+type BenchmarkSet { id: ID! name: String! status: String! createdAt: String! items: [BenchmarkItem!]! }
+type ModelFactor { ratioCode: String! ratioName: String! weight: Float! isStopFactor: Boolean! badValue: Float! goodValue: Float! stopValue: Float }
+type RatingBand { rating: String! minScore: Float! limitPercent: Float! }
+type ScoringModel { id: ID! name: String! version: Int! status: String! createdBy: User createdAt: String! factors: [ModelFactor!]! bands: [RatingBand!]! }
+type FactorScore { ratioCode: String! ratioName: String! ratioValue: Float! score: Float! weight: Float! }
+type ScoringResult {
+    id: ID!
+    totalScore: Float!
+    rating: String!
+    recommendedLimit: Float!
+    stopTriggered: Boolean!
+    calculatedAt: String!
+    factorScores: [FactorScore!]!
+    model: ScoringModel
+}
+
+# ---------- уведомления ----------
+type Notification { id: ID! type: String! title: String! message: String! applicationId: ID createdAt: String! isRead: Boolean! deliveryStatus: String! }

@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: statement-service
+  main:
+    web-application-type: none
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:55432}/statement_db
+    username: ${POSTGRES_USER:credit}
+    password: ${POSTGRES_PASSWORD:credit}
+    hikari:
+      maximum-pool-size: 5
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+    properties:
+      hibernate.default_batch_fetch_size: 50
+
+grpc:
+  server:
+    port: 9103

@@ -1,0 +1,26 @@
+spring:
+  application:
+    name: graphql-gateway
+  graphql:
+    graphiql:
+      enabled: true
+      path: /graphiql
+    schema:
+      printer:
+        enabled: true
+
+server:
+  port: 8080
+
+# Auth Service (REST): регистрация, вход, проверка JWT и активной сессии
+auth-service:
+  url: ${AUTH_URL:http://localhost:8081}
+  connect-timeout-ms: 1000
+  read-timeout-ms: 2500
+  max-attempts: 2
+
+grpc:
+  client:
+    timeout-ms: 3000
+    max-attempts: 3
+    backoff-ms: 150
