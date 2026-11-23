@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: auth-service
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:55432}/identity_db
+    username: ${POSTGRES_USER:credit}
+    password: ${POSTGRES_PASSWORD:credit}
+    hikari:
+      maximum-pool-size: 5
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+    properties:
+      hibernate.default_batch_fetch_size: 50
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:56379}
+      timeout: 1s
+
+server:
+  port: 8081
+
+auth:
+  jwt:
+    # секрет подписи JWT (HS256); в промышленной среде задаётся переменной окружения
+    secret: ${JWT_SECRET:dev-only-secret-change-me-dev-only-secret-change-me}
+  # время жизни сессии в Redis; продлевается при каждой успешной проверке (скользящее окно)
+  session-ttl-minutes: ${SESSION_TTL_MINUTES:30}
+  seed-users: true
