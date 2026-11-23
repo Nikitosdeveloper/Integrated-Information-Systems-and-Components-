@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package creditscoring;
+
+import "common.proto";
+
+option java_multiple_files = true;
+option java_package = "com.creditscoring.contracts";
+
+service NotificationService {
+  rpc ListNotifications(ListNotificationsRequest) returns (NotificationList);
+  rpc MarkRead(IdRequest) returns (Notification);
+}
+
+message Notification {
+  string id = 1;
+  string type = 2;
+  string title = 3;
+  string message = 4;
+  string application_id = 5;
+  string created_at = 6;
+  bool is_read = 7;
+  string delivery_status = 8;
+}
+
+message NotificationList {
+  repeated Notification items = 1;
+}
+
+message ListNotificationsRequest {
+  bool unread_only = 1;
+  int32 limit = 2;
+}

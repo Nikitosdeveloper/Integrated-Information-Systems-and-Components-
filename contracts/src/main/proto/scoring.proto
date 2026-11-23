@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+package creditscoring;
+
+import "common.proto";
+
+option java_multiple_files = true;
+option java_package = "com.creditscoring.contracts";
+
+service ScoringService {
+  rpc GetScoringResult(IdRequest) returns (ScoringResult);   // id = application_id, последний результат
+  rpc ListModels(Empty) returns (ModelList);
+  rpc GetModel(IdRequest) returns (ScoringModel);
+  // Бизнес-операция: активация версии модели (прежняя активная архивируется)
+  rpc ActivateModel(IdRequest) returns (ScoringModel);
+}
+
+message ModelFactor {
+  string ratio_code = 1;
+  string ratio_name = 2;
+  double weight = 3;
+  bool is_stop_factor = 4;
+  double bad_value = 5;
+  double good_value = 6;
+  optional double stop_value = 7;
+}
+
+message RatingBand {
+  string rating = 1;
+  double min_score = 2;
+  double limit_percent = 3;
+}
+
+message ScoringModel {
+  string id = 1;
+  string name = 2;
+  int32 version = 3;
+  string status = 4;       // DRAFT | ACTIVE | ARCHIVED
+  string created_by = 5;
+  string created_at = 6;
+  repeated ModelFactor factors = 7;
+  repeated RatingBand bands = 8;
+}
+
+message ModelList {
+  repeated ScoringModel items = 1;
+}
+
+message FactorScore {
+  string ratio_code = 1;
+  string ratio_name = 2;
+  double ratio_value = 3;
+  double score = 4;
+  double weight = 5;
+}
+
+message ScoringResult {
+  string id = 1;
+  string application_id = 2;
+  string model_id = 3;
+  double total_score = 4;
+  string rating = 5;
+  double recommended_limit = 6;
+  bool stop_triggered = 7;
+  string calculated_at = 8;
+  repeated FactorScore factor_scores = 9;
+}

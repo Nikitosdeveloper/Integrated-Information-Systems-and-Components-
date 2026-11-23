@@ -1,0 +1,210 @@
+syntax = "proto3";
+
+package creditscoring;
+
+import "common.proto";
+
+option java_multiple_files = true;
+option java_package = "com.creditscoring.contracts";
+
+service ApplicationService {
+  // Справочник и запросы
+  rpc ListCreditProducts(ListProductsRequest) returns (ProductList);
+  rpc GetApplication(IdRequest) returns (CreditApplication);
+  rpc ListApplications(ListApplicationsRequest) returns (ApplicationPage);   // фильтрация, сортировка, страницы
+  rpc GetApplicationStats(ApplicationStatsRequest) returns (ApplicationStats); // агрегация
+  rpc GetHistory(IdRequest) returns (HistoryList);
+  rpc GetDocumentRequests(IdRequest) returns (DocumentRequestList);
+  rpc GetConclusion(IdRequest) returns (AnalystConclusion);
+  rpc GetDecision(IdRequest) returns (CreditDecision);
+
+  // Бизнес-операции
+  rpc CreateApplication(CreateApplicationRequest) returns (CreditApplication);
+  rpc SubmitApplication(IdRequest) returns (CreditApplication);
+  rpc CancelApplication(CancelApplicationRequest) returns (CreditApplication);
+  rpc AssignToMe(IdRequest) returns (CreditApplication);
+  rpc RequestDocuments(RequestDocumentsRequest) returns (DocumentRequest);
+  rpc ProvideDocument(ProvideDocumentRequest) returns (DocumentRequest);
+  rpc SaveConclusion(SaveConclusionRequest) returns (AnalystConclusion);
+  rpc SendToCommittee(IdRequest) returns (CreditApplication);
+  rpc MakeDecision(MakeDecisionRequest) returns (CreditDecision);
+  rpc RecalculateScoring(IdRequest) returns (Ack);
+}
+
+message CreditProduct {
+  string id = 1;
+  string name = 2;
+  double min_amount = 3;
+  double max_amount = 4;
+  int32 max_term_months = 5;
+  double interest_rate = 6;
+  string status = 7;
+}
+
+message ProductList {
+  repeated CreditProduct items = 1;
+}
+
+message ListProductsRequest {
+  bool include_archived = 1;
+}
+
+message CreditApplication {
+  string id = 1;
+  string company_id = 2;
+  string company_name = 3;
+  string industry_code = 4;
+  CreditProduct product = 5;
+  double amount = 6;
+  int32 term_months = 7;
+  string purpose = 8;
+  string collateral = 9;
+  string status = 10;
+  string created_by = 11;
+  string created_at = 12;
+  string submitted_at = 13;
+  string assigned_analyst_id = 14;
+  string latest_rating = 15;
+  optional double latest_score = 16;
+  optional double recommended_limit = 17;
+}
+
+message ApplicationFilter {
+  repeated string statuses = 1;
+  optional double amount_from = 2;
+  optional double amount_to = 3;
+  string company_name_contains = 4;
+  string rating = 5;
+  string created_from = 6;   // ISO-8601 date
+  string created_to = 7;
+  bool assigned_to_me = 8;
+}
+
+message ListApplicationsRequest {
+  string scope = 1;            // MY | ANALYST_QUEUE | COMMITTEE_QUEUE | ALL
+  ApplicationFilter filter = 2;
+  string sort_field = 3;       // CREATED_AT | SUBMITTED_AT | AMOUNT | STATUS | SCORE
+  string sort_direction = 4;   // ASC | DESC
+  int32 page = 5;              // с 1
+  int32 page_size = 6;
+}
+
+message ApplicationPage {
+  repeated CreditApplication items = 1;
+  int64 total = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}
+
+message ApplicationStatsRequest {
+  string scope = 1;
+  ApplicationFilter filter = 2;
+}
+
+message StatusStat {
+  string status = 1;
+  int64 count = 2;
+  double total_amount = 3;
+}
+
+message ApplicationStats {
+  int64 total_count = 1;
+  double total_amount = 2;
+  double average_amount = 3;
+  optional double average_score = 4;
+  repeated StatusStat by_status = 5;
+}
+
+message HistoryItem {
+  string from_status = 1;
+  string to_status = 2;
+  string changed_by = 3;
+  string comment = 4;
+  string changed_at = 5;
+}
+
+message HistoryList {
+  repeated HistoryItem items = 1;
+}
+
+message DocumentItem {
+  string id = 1;
+  string title = 2;
+  bool is_required = 3;
+  string status = 4;       // PENDING | PROVIDED
+  string file_name = 5;
+}
+
+message DocumentRequest {
+  string id = 1;
+  string application_id = 2;
+  string requested_by = 3;
+  string due_date = 4;
+  string status = 5;       // OPEN | CLOSED
+  repeated DocumentItem items = 6;
+}
+
+message DocumentRequestList {
+  repeated DocumentRequest items = 1;
+}
+
+message AnalystConclusion {
+  string id = 1;
+  string application_id = 2;
+  string analyst_id = 3;
+  string text = 4;
+  string recommendation = 5;   // APPROVE | REJECT
+  string created_at = 6;
+}
+
+message CreditDecision {
+  string id = 1;
+  string application_id = 2;
+  string decided_by = 3;
+  string decision = 4;         // APPROVED | REJECTED
+  optional double approved_amount = 5;
+  string comment = 6;
+  string decided_at = 7;
+}
+
+message CreateApplicationRequest {
+  string product_id = 1;
+  double amount = 2;
+  int32 term_months = 3;
+  string purpose = 4;
+  string collateral = 5;
+}
+
+message CancelApplicationRequest {
+  string id = 1;
+  string reason = 2;
+}
+
+message RequestedItem {
+  string title = 1;
+  bool is_required = 2;
+}
+
+message RequestDocumentsRequest {
+  string application_id = 1;
+  string due_date = 2;
+  repeated RequestedItem items = 3;
+}
+
+message ProvideDocumentRequest {
+  string item_id = 1;
+  string file_name = 2;
+}
+
+message SaveConclusionRequest {
+  string application_id = 1;
+  string text = 2;
+  string recommendation = 3;
+}
+
+message MakeDecisionRequest {
+  string application_id = 1;
+  string decision = 2;
+  optional double approved_amount = 3;
+  string comment = 4;
+}

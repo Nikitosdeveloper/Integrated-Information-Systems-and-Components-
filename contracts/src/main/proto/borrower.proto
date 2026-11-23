@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package creditscoring;
+
+import "common.proto";
+
+option java_multiple_files = true;
+option java_package = "com.creditscoring.contracts";
+
+service BorrowerService {
+  rpc GetCompany(IdRequest) returns (Company);
+  rpc GetCompanies(IdsRequest) returns (CompanyList);
+  rpc ListIndustries(Empty) returns (IndustryList);
+  // Бизнес-операция: изменение контактных данных компании самим заёмщиком
+  rpc UpdateCompanyProfile(UpdateCompanyProfileRequest) returns (Company);
+}
+
+message Industry {
+  string code = 1;
+  string name = 2;
+}
+
+message IndustryList {
+  repeated Industry items = 1;
+}
+
+message Company {
+  string id = 1;
+  string name = 2;
+  string unp = 3;
+  string industry_code = 4;
+  Industry industry = 5;
+  string address = 6;
+  string phone = 7;
+}
+
+message CompanyList {
+  repeated Company items = 1;
+}
+
+message UpdateCompanyProfileRequest {
+  string company_id = 1;
+  string address = 2;
+  string phone = 3;
+}

@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package creditscoring;
+
+option java_multiple_files = true;
+option java_package = "com.creditscoring.contracts";
+
+// Общие сообщения. Информация о пользователе (Actor) передаётся не в теле
+// сообщений, а в gRPC-метаданных: x-user-id, x-user-email, x-user-role, x-company-id.
+
+message Empty {}
+
+message IdRequest {
+  string id = 1;
+}
+
+message IdsRequest {
+  repeated string ids = 1;
+}
+
+message Ack {
+  bool ok = 1;
+}

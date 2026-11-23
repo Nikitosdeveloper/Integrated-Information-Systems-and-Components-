@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+package creditscoring;
+
+import "common.proto";
+
+option java_multiple_files = true;
+option java_package = "com.creditscoring.contracts";
+
+service AnalysisService {
+  rpc GetAnalysis(IdRequest) returns (FinancialAnalysis);              // id = application_id
+  rpc ListRatioDefinitions(Empty) returns (RatioDefinitionList);
+  rpc ListBenchmarkSets(Empty) returns (BenchmarkSetList);
+  rpc GetBenchmarkSet(IdRequest) returns (BenchmarkSet);
+  // Бизнес-операция: активация набора нормативов (прежний активный архивируется)
+  rpc ActivateBenchmarkSet(IdRequest) returns (BenchmarkSet);
+}
+
+message RatioDefinition {
+  string code = 1;
+  string name = 2;
+  string formula = 3;
+  bool higher_is_better = 4;
+}
+
+message RatioDefinitionList {
+  repeated RatioDefinition items = 1;
+}
+
+message RatioValue {
+  string ratio_code = 1;
+  RatioDefinition definition = 2;
+  int32 period_year = 3;
+  double value = 4;
+  string assessment = 5;   // GOOD | NORMAL | BAD
+}
+
+message FinancialAnalysis {
+  string id = 1;
+  string application_id = 2;
+  string company_id = 3;
+  string benchmark_set_id = 4;
+  string benchmark_set_name = 5;
+  string calculated_at = 6;
+  repeated RatioValue ratios = 7;
+}
+
+message BenchmarkItem {
+  string industry_code = 1;
+  string industry_name = 2;
+  string ratio_code = 3;
+  string ratio_name = 4;
+  double good_threshold = 5;
+  double ok_threshold = 6;
+}
+
+message BenchmarkSet {
+  string id = 1;
+  string name = 2;
+  string status = 3;       // DRAFT | ACTIVE | ARCHIVED
+  string created_at = 4;
+  repeated BenchmarkItem items = 5;
+}
+
+message BenchmarkSetList {
+  repeated BenchmarkSet items = 1;
+}

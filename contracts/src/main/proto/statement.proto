@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package creditscoring;
+
+import "common.proto";
+
+option java_multiple_files = true;
+option java_package = "com.creditscoring.contracts";
+
+service StatementService {
+  rpc GetStatement(IdRequest) returns (FinancialStatement);
+  rpc GetStatements(IdsRequest) returns (StatementList);
+  rpc ListCompanyStatements(ListCompanyStatementsRequest) returns (StatementList);
+  rpc GetLines(IdRequest) returns (StatementLineList);
+  rpc GetIssues(IdRequest) returns (IssueList);
+  // Бизнес-операция: загрузка формы отчётности с контролем (баланс сходится, строки заполнены)
+  rpc UploadStatement(UploadStatementRequest) returns (FinancialStatement);
+}
+
+message StatementLine {
+  string code = 1;
+  string name = 2;
+  double value = 3;
+}
+
+message StatementLineList {
+  repeated StatementLine items = 1;
+}
+
+message ValidationIssue {
+  string severity = 1;
+  string message = 2;
+}
+
+message IssueList {
+  repeated ValidationIssue items = 1;
+}
+
+message FinancialStatement {
+  string id = 1;
+  string company_id = 2;
+  string form_type = 3;   // BALANCE | PROFIT_LOSS
+  int32 period_year = 4;
+  string status = 5;      // VALID | INVALID
+  string created_at = 6;
+  repeated StatementLine lines = 7;      // заполняется, только если запрошено
+  repeated ValidationIssue issues = 8;   // заполняется, только если запрошено
+}
+
+message StatementList {
+  repeated FinancialStatement items = 1;
+}
+
+message ListCompanyStatementsRequest {
+  string company_id = 1;
+  bool include_lines = 2;
+  bool only_valid = 3;
+}
+
+message UploadStatementRequest {
+  string company_id = 1;
+  string form_type = 2;
+  int32 period_year = 3;
+  repeated StatementLine lines = 4;
+}
